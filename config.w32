@@ -1,0 +1,5 @@
+ ARG_ENABLE("callmap", "enable callmap support", "no");
+
+if (PHP_CALLMAP != "no") {
+   EXTENSION("callmap", "callmap.c");
+}
