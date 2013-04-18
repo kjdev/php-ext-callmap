@@ -13,7 +13,7 @@ This extension allows call a callback with an map of parameters function.
 
 ## Configration
 
-    callmap.ini:
+callmap.ini:
 
     extension=callmap.so
 
