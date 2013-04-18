@@ -1,5 +1,7 @@
 # Call a callback with an map of parameters function Extension for PHP
 
+[![Build Status](https://travis-ci.org/kjdev/php-ext-callmap.png?branch=master)](https://travis-ci.org/kjdev/php-ext-callmap)
+
 This extension allows call a callback with an map of parameters function.
 
 ## Build
