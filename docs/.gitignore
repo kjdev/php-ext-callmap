@@ -1,4 +1,6 @@
 Doxyfile
-call_user_func_map.php
 callmap.doc
+call_user_func_map.php
 forward_static_call_map.php
+coverage-footer.html
+doxygen-footer.html
