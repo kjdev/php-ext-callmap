@@ -51,7 +51,7 @@ callmap_var_destroy(callmap_var *arg) {
 }
 
 static zval **
-callmap_get_default(zend_function *func, long offset, callmap_var *var)
+callmap_get_default(zend_function *func, long offset, callmap_var *var TSRMLS_DC)
 {
     zend_op_array *op_array;
     zend_op *op, *end;
@@ -130,7 +130,7 @@ callmap_fcall_info_args(zend_fcall_info *fci, zval *args, zend_function *func,
                     offset = 0;
                     argc--;
                 } else {
-                    fci->params[i] = callmap_get_default(func, i, var);
+                    fci->params[i] = callmap_get_default(func, i, var TSRMLS_CC);
                     if (fci->params[i] != NULL) {
                         count++;
                     } else {
@@ -146,7 +146,7 @@ callmap_fcall_info_args(zend_fcall_info *fci, zval *args, zend_function *func,
                     index++;
                     argc--;
                 } else {
-                    fci->params[i] = callmap_get_default(func, i, var);
+                    fci->params[i] = callmap_get_default(func, i, var TSRMLS_CC);
                     if (fci->params[i] != NULL) {
                         count++;
                     } else {
