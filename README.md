@@ -157,5 +157,5 @@ callmap.ini (callmap.override\_call\_user\_func\_array=1)
 
 ## Related
 
-* [code coverage report](http://gcov.at-ninja.jp/php-ext-callmap/)
-* [api document](http://api.at-ninja.jp/php-ext-callmap/)
+* [code coverage report](http://gcov.at-ninja.jp.2-t.jp/D)
+* [api document](http://api.at-ninja.jp.2-t.jp/E)
