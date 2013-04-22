@@ -270,7 +270,7 @@ zend_function *origin_call_user_func_array = NULL;
 zend_function *origin_forward_static_call_array = NULL;
 
 static zend_function *
-callmap_override_function(char *origin, char *override)
+callmap_override_function(char *origin, char *override TSRMLS_DC)
 {
     size_t origin_len = strlen(origin);
     size_t override_len = strlen(override);
@@ -316,11 +316,11 @@ ZEND_MINIT_FUNCTION(callmap)
     /* Function override */
     if (CALLMAP_G(call_user_func_array)) {
         origin_call_user_func_array = callmap_override_function(
-            "call_user_func_array", "call_user_func_map");
+            "call_user_func_array", "call_user_func_map" TSRMLS_CC);
     }
     if (CALLMAP_G(forward_static_call_array)) {
         origin_forward_static_call_array = callmap_override_function(
-            "forward_static_call_array", "forward_static_call_map");
+            "forward_static_call_array", "forward_static_call_map" TSRMLS_CC);
     }
 
     return SUCCESS;
