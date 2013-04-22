@@ -67,18 +67,26 @@ callmap_get_default(zend_function *func, long offset, callmap_var *var TSRMLS_DC
     ++offset;
 
     while (op < end) {
+#if ZEND_MODULE_API_NO < 20100525
         if ((op->opcode == ZEND_RECV || op->opcode == ZEND_RECV_INIT)
-            && op->op1.num == offset) {
-            if (!op || op->opcode != ZEND_RECV_INIT
-                || op->op2_type == IS_UNUSED) {
+            && op->op1.u.constant.value.lval == offset) {
+            if (Z_TYPE(op->op2.u.constant) == IS_NULL) {
                 return NULL;
             }
-
+            MAKE_STD_ZVAL(zv);
+            *zv = op->op2.u.constant;
+            zval_copy_ctor(zv);
+#else
+        if ((op->opcode == ZEND_RECV || op->opcode == ZEND_RECV_INIT)
+            && op->op1.num == offset) {
+            if (op->opcode != ZEND_RECV_INIT || op->op2_type == IS_UNUSED) {
+                return NULL;
+            }
             MAKE_STD_ZVAL(zv);
             *zv = *op->op2.zv;
             zval_copy_ctor(zv);
             Z_UNSET_ISREF_P(zv);
-
+#endif
             zend_hash_next_index_insert(Z_ARRVAL_P(var->defaults), &zv,
                                         sizeof(zval *), (void **)&zv_ptr);
 
