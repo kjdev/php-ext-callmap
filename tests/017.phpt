@@ -75,12 +75,12 @@ array(1) {
 }
 string(6) "onebar"
 ----- Calling 3 -----
-foobar got  and two
+foobar got foo and two
 array(1) {
   ["b"]=>
   string(3) "two"
 }
-string(3) "two"
+string(6) "footwo"
 ----- Calling 4 -----
 foobar got one and bar
 array(2) {
@@ -91,14 +91,14 @@ array(2) {
 }
 string(6) "onebar"
 ----- Calling 5 -----
-foobar got  and two
+foobar got foo and two
 array(2) {
   ["c"]=>
   string(3) "one"
   ["b"]=>
   string(3) "two"
 }
-string(3) "two"
+string(6) "footwo"
 ----- Calling 6 -----
 foobar got foo and bar
 array(2) {

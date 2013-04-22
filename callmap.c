@@ -20,9 +20,79 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_forward_static_call_map, 0, 0, 2)
     ZEND_ARG_INFO(0, params)
 ZEND_END_ARG_INFO()
 
+typedef struct callmap_var_t {
+    zval *null;
+    zval *defaults;
+} callmap_var;
+
+static void
+callmap_var_init(callmap_var *arg) {
+    MAKE_STD_ZVAL(arg->defaults);
+    array_init(arg->defaults);
+
+    MAKE_STD_ZVAL(arg->null);
+    ZVAL_NULL(arg->null);
+}
+
+static void
+callmap_var_destroy(callmap_var *arg) {
+    zval **zv;
+    HashPosition pos;
+
+    zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(arg->defaults), &pos);
+    while (zend_hash_get_current_data_ex(Z_ARRVAL_P(arg->defaults),
+                                         (void **)&zv, &pos) == SUCCESS) {
+        zval_ptr_dtor(zv);
+        zend_hash_move_forward_ex(Z_ARRVAL_P(arg->defaults), &pos);
+    }
+
+    zval_ptr_dtor(&arg->defaults);
+    zval_ptr_dtor(&arg->null);
+}
+
+static zval **
+callmap_get_default(zend_function *func, long offset, callmap_var *var)
+{
+    zend_op_array *op_array;
+    zend_op *op, *end;
+    zval *zv, **zv_ptr;
+
+    if (!func) {
+        return NULL;
+    }
+
+    op_array = (zend_op_array *)func;
+    op = op_array->opcodes;
+    end = op + op_array->last;
+    ++offset;
+
+    while (op < end) {
+        if ((op->opcode == ZEND_RECV || op->opcode == ZEND_RECV_INIT)
+            && op->op1.num == offset) {
+            if (!op || op->opcode != ZEND_RECV_INIT
+                || op->op2_type == IS_UNUSED) {
+                return NULL;
+            }
+
+            MAKE_STD_ZVAL(zv);
+            *zv = *op->op2.zv;
+            zval_copy_ctor(zv);
+            Z_UNSET_ISREF_P(zv);
+
+            zend_hash_next_index_insert(Z_ARRVAL_P(var->defaults), &zv,
+                                        sizeof(zval *), (void **)&zv_ptr);
+
+            return zv_ptr;
+        }
+        ++op;
+    }
+
+    return NULL;
+}
+
 static int
-callmap_fcall_info_args(zend_fcall_info *fci, zval *args,
-                        zend_function *func, zval **null TSRMLS_DC)
+callmap_fcall_info_args(zend_fcall_info *fci, zval *args, zend_function *func,
+                        callmap_var *var TSRMLS_DC)
 {
     long argc;
     zval **arg, ***params;
@@ -60,8 +130,13 @@ callmap_fcall_info_args(zend_fcall_info *fci, zval *args,
                     offset = 0;
                     argc--;
                 } else {
-                    fci->params[i] = null;
-                    offset++;
+                    fci->params[i] = callmap_get_default(func, i, var);
+                    if (fci->params[i] != NULL) {
+                        count++;
+                    } else {
+                        fci->params[i] = &var->null;
+                        offset++;
+                    }
                 }
             } else {
                 if (zend_hash_index_find(Z_ARRVAL_P(args), index,
@@ -71,17 +146,22 @@ callmap_fcall_info_args(zend_fcall_info *fci, zval *args,
                     index++;
                     argc--;
                 } else {
-                    fci->params[i] = null;
-                    offset++;
+                    fci->params[i] = callmap_get_default(func, i, var);
+                    if (fci->params[i] != NULL) {
+                        count++;
+                    } else {
+                        fci->params[i] = &var->null;
+                        offset++;
+                    }
                 }
             }
+
             arg_info++;
 
             if (argc == 0) {
                 break;
             }
         }
-
         fci->param_count = count;
     } else {
         HashPosition pos;
@@ -103,20 +183,20 @@ callmap_fcall_info_args(zend_fcall_info *fci, zval *args,
 
 ZEND_FUNCTION(call_user_func_map)
 {
-    zval *params, *retval_ptr = NULL, *null = NULL;
+    zval *params, *retval_ptr = NULL;
     zend_fcall_info fci;
     zend_fcall_info_cache fci_cache;
+    callmap_var var;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC,
                               "fa/", &fci, &fci_cache, &params) == FAILURE) {
         return;
     }
 
-    MAKE_STD_ZVAL(null);
-    ZVAL_NULL(null);
+    callmap_var_init(&var);
 
     callmap_fcall_info_args(&fci, params,
-                            fci_cache.function_handler, &null TSRMLS_CC);
+                            fci_cache.function_handler, &var TSRMLS_CC);
 
     fci.retval_ptr_ptr = &retval_ptr;
 
@@ -128,14 +208,15 @@ ZEND_FUNCTION(call_user_func_map)
 
     zend_fcall_info_args_clear(&fci, 1);
 
-    zval_ptr_dtor(&null);
+    callmap_var_destroy(&var);
 }
 
 ZEND_FUNCTION(forward_static_call_map)
 {
-    zval *params, *retval_ptr = NULL, *null = NULL;
+    zval *params, *retval_ptr = NULL;
     zend_fcall_info fci;
     zend_fcall_info_cache fci_cache;
+    callmap_var var;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC,
                               "fa/", &fci, &fci_cache, &params) == FAILURE) {
@@ -151,11 +232,10 @@ ZEND_FUNCTION(forward_static_call_map)
     }
     */
 
-    MAKE_STD_ZVAL(null);
-    ZVAL_NULL(null);
+    callmap_var_init(&var);
 
     callmap_fcall_info_args(&fci, params,
-                            fci_cache.function_handler, &null TSRMLS_CC);
+                            fci_cache.function_handler, &var TSRMLS_CC);
 
     fci.retval_ptr_ptr = &retval_ptr;
 
@@ -172,7 +252,84 @@ ZEND_FUNCTION(forward_static_call_map)
 
     zend_fcall_info_args_clear(&fci, 1);
 
-    zval_ptr_dtor(&null);
+    callmap_var_destroy(&var);
+}
+
+ZEND_DECLARE_MODULE_GLOBALS(callmap)
+
+PHP_INI_BEGIN()
+STD_PHP_INI_ENTRY("callmap.override_call_user_func_array", "0",
+                  PHP_INI_SYSTEM, OnUpdateBool, call_user_func_array,
+                  zend_callmap_globals, callmap_globals)
+STD_PHP_INI_ENTRY("callmap.override_forward_static_call_array", "0",
+                  PHP_INI_SYSTEM, OnUpdateBool, forward_static_call_array,
+                  zend_callmap_globals, callmap_globals)
+PHP_INI_END()
+
+zend_function *origin_call_user_func_array = NULL;
+zend_function *origin_forward_static_call_array = NULL;
+
+static zend_function *
+callmap_override_function(char *origin, char *override)
+{
+    size_t origin_len = strlen(origin);
+    size_t override_len = strlen(override);
+    zend_function *origin_fe, *override_fe;
+
+    if (zend_hash_find(CG(function_table), override, override_len + 1,
+                       (void **)&override_fe) == FAILURE) {
+        zend_error(E_WARNING, "%s symbol not found.", override);
+        return NULL;
+    }
+
+    if (zend_hash_find(CG(function_table), origin, origin_len + 1,
+                       (void **)&origin_fe) == FAILURE) {
+        zend_error(E_WARNING, "%s symbol not found.", origin);
+        return NULL;
+    }
+
+    if (zend_hash_update(CG(function_table), origin, origin_len + 1,
+                         (void *)override_fe, sizeof(zend_function),
+                         NULL) == FAILURE) {
+        zend_error(E_WARNING, "Error override reference to function name %s()",
+                   origin);
+        return NULL;
+    }
+
+    function_add_ref(override_fe);
+
+    return origin_fe;
+}
+
+static void
+callmap_init_globals(zend_callmap_globals *callmap_globals)
+{
+    callmap_globals->call_user_func_array = 0;
+    callmap_globals->forward_static_call_array = 0;
+}
+
+ZEND_MINIT_FUNCTION(callmap)
+{
+    ZEND_INIT_MODULE_GLOBALS(callmap, callmap_init_globals, NULL);
+    REGISTER_INI_ENTRIES();
+
+    /* Function override */
+    if (CALLMAP_G(call_user_func_array)) {
+        origin_call_user_func_array = callmap_override_function(
+            "call_user_func_array", "call_user_func_map");
+    }
+    if (CALLMAP_G(forward_static_call_array)) {
+        origin_forward_static_call_array = callmap_override_function(
+            "forward_static_call_array", "forward_static_call_map");
+    }
+
+    return SUCCESS;
+}
+
+ZEND_MSHUTDOWN_FUNCTION(callmap)
+{
+    UNREGISTER_INI_ENTRIES();
+    return SUCCESS;
 }
 
 ZEND_MINFO_FUNCTION(callmap)
@@ -180,6 +337,14 @@ ZEND_MINFO_FUNCTION(callmap)
     php_info_print_table_start();
     php_info_print_table_row(2, "Call Map support", "enabled");
     php_info_print_table_row(2, "Extension Version", CALLMAP_EXT_VERSION);
+    if (CALLMAP_G(call_user_func_array)) {
+        php_info_print_table_row(2, "Override call_user_func_array",
+                                 "enabled");
+    }
+    if (CALLMAP_G(forward_static_call_array)) {
+        php_info_print_table_row(2, "Override forward_static_call_array",
+                                 "enabled");
+    }
     php_info_print_table_end();
 }
 
@@ -195,8 +360,8 @@ zend_module_entry callmap_module_entry = {
 #endif
     "callmap",
     callmap_functions,
-    NULL,
-    NULL,
+    ZEND_MINIT(callmap),
+    ZEND_MSHUTDOWN(callmap),
     NULL,
     NULL,
     ZEND_MINFO(callmap),

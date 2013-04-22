@@ -3,7 +3,7 @@
 #define PHP_CALLMAP_H
 
 #define CALLMAP_NAMESPACE "callmap"
-#define CALLMAP_EXT_VERSION "0.1.0"
+#define CALLMAP_EXT_VERSION "0.2.0"
 
 extern zend_module_entry callmap_module_entry;
 #define phpext_callmap_ptr &callmap_module_entry
@@ -19,6 +19,11 @@ extern zend_module_entry callmap_module_entry;
 #ifdef ZTS
 #    include "TSRM.h"
 #endif
+
+ZEND_BEGIN_MODULE_GLOBALS(callmap)
+zend_bool call_user_func_array;
+zend_bool forward_static_call_array;
+ZEND_END_MODULE_GLOBALS(callmap)
 
 #ifdef ZTS
 #    define CALLMAP_G(v) TSRMG(callmap_globals_id, zend_callmap_globals *, v)

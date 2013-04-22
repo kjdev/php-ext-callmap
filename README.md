@@ -17,6 +17,18 @@ callmap.ini:
 
     extension=callmap.so
 
+    callmap.override_call_user_func_array=0      ; PHP_INI_SYSTEM
+    callmap.override_forward_static_call_array=0 ; PHP_INI_SYSTEM
+
+### callmap.override\_call\_user\_func\_array _bool_
+
+Override to call\_user\_func\_map the call\_user\_func\_array function.
+
+### callmap.override\_forward\_static\_call\_array _bool_
+
+Override to forward\_static\_call\_map the forward\_static\_call\_array function.
+
+
 ## Function
 
 * call\_user\_func\_map — Call a callback with an map of parameters
@@ -116,6 +128,32 @@ Returns the return value of the callback, or FALSE on error.
     call_user_func_map('test', array('a' => 'A', 'c' => 'C'));
 
 ![Example 3](docs/example_03.png)
+
+### Example #4
+
+    function test($a = '1', $b = '2', $c = '3', $d = '4') {
+        //$a -- 'A'
+        //$b -- '2' //version 0.2.0 or newer (0.1.0 is NULL)
+        //$c -- 'C'
+        //$d -- '4'
+    }
+    call_user_func_map('test', array('a' => 'A', 'c' => 'C'));
+
+![Example 4](docs/example_04.png)
+
+### Example #5
+
+callmap.ini (callmap.override\_call\_user\_func\_array=1)
+
+    var_dump(ini_get('callmap.override_call_user_func_array')); //bool(true)
+
+    function test($a, $b) {
+        return $a . $b;
+    }
+    $res1 = call_user_func_array('test', array('b' => '2', 'a' => '1'));
+    $res2 = call_user_func_map('test', array('b' => '2', 'a' => '1'));
+
+    var_dump($res1 === $res2); //bool(true)
 
 ## Related
 
