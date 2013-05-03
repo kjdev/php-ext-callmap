@@ -266,12 +266,12 @@ ZEND_FUNCTION(forward_static_call_map)
 ZEND_DECLARE_MODULE_GLOBALS(callmap)
 
 PHP_INI_BEGIN()
-STD_PHP_INI_ENTRY("callmap.override_call_user_func_array", "0",
-                  PHP_INI_SYSTEM, OnUpdateBool, call_user_func_array,
-                  zend_callmap_globals, callmap_globals)
-STD_PHP_INI_ENTRY("callmap.override_forward_static_call_array", "0",
-                  PHP_INI_SYSTEM, OnUpdateBool, forward_static_call_array,
-                  zend_callmap_globals, callmap_globals)
+    STD_PHP_INI_BOOLEAN("callmap.override_call_user_func_array", "0",
+                        PHP_INI_SYSTEM, OnUpdateBool, call_user_func_array,
+                        zend_callmap_globals, callmap_globals)
+    STD_PHP_INI_BOOLEAN("callmap.override_forward_static_call_array", "0",
+                        PHP_INI_SYSTEM, OnUpdateBool, forward_static_call_array,
+                        zend_callmap_globals, callmap_globals)
 PHP_INI_END()
 
 zend_function *origin_call_user_func_array = NULL;
